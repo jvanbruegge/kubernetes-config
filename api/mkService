@@ -12,5 +12,6 @@ in \(s : ./Service) ->
             //
             { ports = s.ports
             , type = s.type
+            , selector = Some [{ mapKey = "app", mapValue = s.name }]
             })
         }

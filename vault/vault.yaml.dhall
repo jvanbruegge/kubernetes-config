@@ -7,13 +7,22 @@ let utils = ../api/utils.dhall
 
 let config = ./vaultConfig.dhall
 
+let sslVolumeMount =
+    defaultVolumeMount
+        { mountPath = config.sslPath
+        , name = "store"
+        }
+    // { subPath = Some "rootCA" }
+
+
 let vaultContainer =
     defaultContainer
         { name = "vault"
         , image = "registry.hub.docker.com/library/vault:0.11.5"
         }
     //
-    { args = Some ["server"]
+    { command = Some ["sh"]
+    , args = Some ["/scripts/runVault.sh"]
     , env = Some
         [{ name = "VAULT_LOCAL_CONFIG"
         , value = Some config.file
@@ -27,11 +36,11 @@ let vaultContainer =
             , name = "store"
             }
           // { subPath = Some "vault" }
+        , sslVolumeMount
         , defaultVolumeMount
-            { mountPath = config.sslPath
-            , name = "store"
+            { mountPath = "/scripts"
+            , name = "vault-configmap"
             }
-          // { subPath = Some "rootCA" }
         ]
     {-, readinessProbe = Some (utils.httpGetProbe
         { path = "/v1/sys/health?standbyok=true"
@@ -47,16 +56,12 @@ let sslInit =
         }
     //
     { command = Some ["sh"]
-    , args = Some ["/run/run.sh"]
+    , args = Some ["/scripts/initSSL.sh"]
     , volumeMounts = Some
-        [defaultVolumeMount
-            { mountPath = config.sslPath
-            , name = "store"
-            }
-          // { subPath = Some "rootCA" }
+        [ sslVolumeMount
         , defaultVolumeMount
-            { mountPath = "/run"
-            , name = "ssl-configmap"
+            { mountPath = "/scripts"
+            , name = "vault-configmap"
             }
         ]
     }
@@ -68,7 +73,7 @@ let config =
     , replicas = 1
     , volumes = Some
         [ { name = "store", volumeType = <PVC = "data-claim" | ConfigMap : Text> }
-        , { name = "ssl-configmap", volumeType = <ConfigMap = "ssl-config" | PVC : Text> }
+        , { name = "vault-configmap", volumeType = <ConfigMap = "vault-config" | PVC : Text> }
         ]
     }
 

@@ -5,7 +5,7 @@ in \(c : ./Container) ->
     defaultContainer { name = c.name }
     //
     { image = Some c.image
-    , imagePullPolicy = Some "Always"
+    , imagePullPolicy = Some "IfNotPresent"
     , ports = c.ports
     , readinessProbe = c.readinessProbe
     , args = c.args

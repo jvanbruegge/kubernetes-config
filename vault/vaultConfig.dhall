@@ -1,5 +1,5 @@
 let cfg =
-    { path = "/vault/store"
+    { path = "/vault"
     , sslPath = "/ssl/rootCA"
     , port = 8200
     }
@@ -13,7 +13,8 @@ storage "file" {
 
 listener "tcp" {
   address = "0.0.0.0:'' ++ Natural/show _params.port ++''"
-  tls_disable = 1
+  tls_key_file = "'' ++ _params.sslPath ++ ''/vault.key"
+  tls_cert_file = "'' ++ _params.sslPath ++ ''/vault.crt"
 }
 ''
 
