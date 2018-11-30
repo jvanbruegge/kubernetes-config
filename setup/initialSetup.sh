@@ -38,12 +38,24 @@ if [ ! -e "$dir/rootCA.key" ]; then
     fi
 fi
 
-echo "Generating client certificate for vault"
-openssl genrsa -out "$dir/vault.key" 4096
-openssl req -new -key "$dir/vault.key" -out "$dir/vault.csr" -config vault.conf
-echo "Signing vault client certificate with root CA"
-openssl x509 -req -in "$dir/vault.csr" -CA "$dir/rootCA.pem" -CAkey "$dir/rootCA.key" \
-    -CAcreateserial -out "$dir/vault.crt" -days 500
+function createCert {
+    user=$1
+
+    if [ ! -e "$dir/$user.key" ]; then
+        echo "Generating client certificate for $user"
+        openssl genrsa -out "$dir/$user.key" 4096
+        openssl req -new -key "$dir/$user.key" -out "$dir/$user.csr" -config "$user.conf"
+        openssl x509 -req -in "$dir/$user.csr" -CA "$dir/rootCA.pem" \
+            -CAkey "$dir/rootCA.key" -CAcreateserial -out "$dir/$user.crt" -days 500
+
+        if [[ $2 == "export" ]]; then
+            openssl pkcs12 -export -in "$dir/$user.crt" -inkey "$dir/$user.key" \
+                -out "$dir/$user.p12"
+        fi
+    fi
+}
+
+createCert vault
 
 echo "Copying vault certificate and key to server"
 if [ -x "$(command -v minikube 2>/dev/null)" ]; then
@@ -53,4 +65,11 @@ if [ -x "$(command -v minikube 2>/dev/null)" ]; then
 
     ssh -i $(minikube ssh-key) docker@$(minikube ip) \
         'su -c "cat > /data/vault/ssl/vault.crt"' < "$dir/vault.crt"
+
+    ssh -i $(minikube ssh-key) docker@$(minikube ip) \
+        'su -c "cat > /data/vault/ssl/ca.crt"' < "$dir/rootCA.pem"
+else
+    echo "Please copy the certificates manually to the server"
 fi
+
+createCert jan export

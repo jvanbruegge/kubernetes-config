@@ -30,8 +30,12 @@ let getProbe : { path : Text, port : Natural, scheme : Text } -> Probe
             })
         } : Probe
 
+let prepend : Text -> Text -> Text
+    = \(prefix : Text) -> \(str : Text) -> prefix ++ str
+
 in
     { fromMaybe = fromMaybe
     , addCapabilities = addCapabilities
     , httpGetProbe = getProbe
+    , prepend = prepend
     }
