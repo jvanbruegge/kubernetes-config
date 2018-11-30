@@ -3,6 +3,7 @@ let EnvVarSource = ../dhall-kubernetes/types/io.k8s.api.core.v1.EnvVarSource.dha
 let defaultContainer = ../api/defaultContainer.dhall
 let defaultPort = ../api/defaultPort.dhall
 let defaultVolumeMount = ../api/defaultVolumeMount.dhall
+let defaultSimpleDeployment = ../api/defaultSimpleDeployment.dhall
 let utils = ../api/utils.dhall
 
 let config = ./config.dhall
@@ -42,11 +43,12 @@ let vaultContainer =
     } : ../api/Container.dhall
 
 let config =
-    { name = "vault"
-    , containers = [vaultContainer]
-    , initContainers = None (List ../api/Container.dhall)
-    , replicas = 1
-    , volumes = Some
+    defaultSimpleDeployment
+        { name = "vault"
+        , containers = [vaultContainer]
+        }
+    //
+    { volumes = Some
         [ { name = volumeName, volumeType = <PVC = "data-claim" | ConfigMap : Text> }
         , { name = "vault-configmap", volumeType = <ConfigMap = "vault-config" | PVC : Text> }
         ]
