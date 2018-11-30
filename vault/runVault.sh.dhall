@@ -1,10 +1,12 @@
-let config = ./vaultConfig.dhall
+let config = ./config.dhall
 
 in ''
 #!/bin/bash
 
-mkdir -p /vault/config
-chown -R vault:vault /vault
+vaultDir='' ++ config.path ++ ''
+
+mkdir -p "$vaultDir/config"
+chown -R vault:vault "$vaultDir"
 
 docker-entrypoint.sh server
 ''

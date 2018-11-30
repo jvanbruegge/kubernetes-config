@@ -1,5 +1,6 @@
 let SecurityContext = ../dhall-kubernetes/types/io.k8s.api.core.v1.SecurityContext.dhall
 let Probe = ../dhall-kubernetes/types/io.k8s.api.core.v1.Probe.dhall
+
 let defaultSecurityContext = ../dhall-kubernetes/default/io.k8s.api.core.v1.SecurityContext.dhall
 let defaultProbe = ../dhall-kubernetes/default/io.k8s.api.core.v1.Probe.dhall
 let defaultHttpGet = ../dhall-kubernetes/default/io.k8s.api.core.v1.HTTPGetAction.dhall
@@ -19,15 +20,15 @@ let addCapabilities : List Text -> SecurityContext
 
 let getProbe : { path : Text, port : Natural, scheme : Text } -> Probe
     = \(_params : { path : Text, port : Natural, scheme : Text }) ->
-        (defaultProbe
+        defaultProbe
         //
         { httpGet = Some (
-            defaultHttpGet ({ port = <Int = _params.port | String : Text> })
+            defaultHttpGet { port = <Int = _params.port | String : Text> }
             //
             { path = Some _params.path
             , scheme = Some _params.scheme
             })
-        }) : Probe
+        } : Probe
 
 in
     { fromMaybe = fromMaybe

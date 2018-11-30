@@ -1,7 +1,9 @@
 let Container = ../dhall-kubernetes/types/io.k8s.api.core.v1.Container.dhall
 let defaultContainer = ../dhall-kubernetes/default/io.k8s.api.core.v1.Container.dhall
+
 let utils = ./utils.dhall
-in \(c : ./Container) ->
+
+in \(c : ./Container.dhall) ->
     defaultContainer { name = c.name }
     //
     { image = Some c.image

@@ -1,19 +1,12 @@
 let EnvVarSource = ../dhall-kubernetes/types/io.k8s.api.core.v1.EnvVarSource.dhall
 
-let defaultContainer = ../api/defaultContainer
-let defaultPort = ../api/defaultPort
-let defaultVolumeMount = ../api/defaultVolumeMount
+let defaultContainer = ../api/defaultContainer.dhall
+let defaultPort = ../api/defaultPort.dhall
+let defaultVolumeMount = ../api/defaultVolumeMount.dhall
 let utils = ../api/utils.dhall
 
-let config = ./vaultConfig.dhall
-
-let sslVolumeMount =
-    defaultVolumeMount
-        { mountPath = config.sslPath
-        , name = "store"
-        }
-    // { subPath = Some "rootCA" }
-
+let config = ./config.dhall
+let volumeName = "store"
 
 let vaultContainer =
     defaultContainer
@@ -25,7 +18,7 @@ let vaultContainer =
     , args = Some ["/scripts/runVault.sh"]
     , env = Some
         [{ name = "VAULT_LOCAL_CONFIG"
-        , value = Some config.file
+        , value = Some ./vault.tcl.dhall
         , valueFrom = None EnvVarSource
         }]
     , securityContext = Some (utils.addCapabilities ["IPC_LOCK"])
@@ -33,10 +26,9 @@ let vaultContainer =
     , volumeMounts = Some
         [defaultVolumeMount
             { mountPath = config.path
-            , name = "store"
+            , name = volumeName
             }
           // { subPath = Some "vault" }
-        , sslVolumeMount
         , defaultVolumeMount
             { mountPath = "/scripts"
             , name = "vault-configmap"
@@ -47,34 +39,17 @@ let vaultContainer =
         , port = config.port
         , scheme = "HTTP"
         })-}
-    } : ../api/Container
-
-let sslInit =
-    defaultContainer
-        { name = "init-root-ca"
-        , image = "registry.hub.docker.com/governmentpaas/curl-ssl:6efea7a479f9336019155cc039ad33d2c8845cb0"
-        }
-    //
-    { command = Some ["sh"]
-    , args = Some ["/scripts/initSSL.sh"]
-    , volumeMounts = Some
-        [ sslVolumeMount
-        , defaultVolumeMount
-            { mountPath = "/scripts"
-            , name = "vault-configmap"
-            }
-        ]
-    }
+    } : ../api/Container.dhall
 
 let config =
     { name = "vault"
     , containers = [vaultContainer]
-    , initContainers = Some [sslInit]
+    , initContainers = None (List ../api/Container.dhall)
     , replicas = 1
     , volumes = Some
-        [ { name = "store", volumeType = <PVC = "data-claim" | ConfigMap : Text> }
+        [ { name = volumeName, volumeType = <PVC = "data-claim" | ConfigMap : Text> }
         , { name = "vault-configmap", volumeType = <ConfigMap = "vault-config" | PVC : Text> }
         ]
     }
 
-in ../api/mkStatefulSet config
+in ../api/mkStatefulSet.dhall config

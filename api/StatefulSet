@@ -1,6 +1,0 @@
-{ name : Text
-, containers : List ./Container
-, initContainers : Optional (List ./Container)
-, replicas : Natural
-, volumes : Optional (List ./Volume)
-}

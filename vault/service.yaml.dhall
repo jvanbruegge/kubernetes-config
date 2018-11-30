@@ -1,8 +1,8 @@
 let defaultService = ../dhall-kubernetes/default/io.k8s.api.core.v1.Service.dhall
 let defaultPort = ../dhall-kubernetes/default/io.k8s.api.core.v1.ServicePort.dhall
-let config = ./vaultConfig.dhall
+let config = ./config.dhall
 
-in ../api/mkService
+in ../api/mkService.dhall
     { name = "vault"
     , type = Some "NodePort"
     , ports = Some [

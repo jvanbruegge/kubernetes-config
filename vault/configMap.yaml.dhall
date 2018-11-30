@@ -5,8 +5,7 @@ in
     defaultConfigMap { metadata = defaultMetadata { name = "vault-config" } }
     //
     { data = Some
-        [ { mapKey = "initSSL.sh", mapValue = ./initSSL.sh.dhall }
-        , { mapKey = "runVault.sh", mapValue = ./runVault.sh.dhall }
+        [ { mapKey = "runVault.sh", mapValue = ./runVault.sh.dhall }
         ]
     }
 
