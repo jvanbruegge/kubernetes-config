@@ -8,7 +8,7 @@ let defaultSimpleDeployment = ../api/defaultSimpleDeployment.dhall
 let haProxyContainer =
     defaultContainer
         { name = "haproxy-ingress"
-        , image = "quay.io/jcmoraisjr/haproxy-ingress:v0.6"
+        , image = "quay.io/jcmoraisjr/haproxy-ingress:v0.7-beta.2"
         }
     //
     { args = Some

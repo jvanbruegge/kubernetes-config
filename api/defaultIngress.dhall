@@ -12,7 +12,7 @@ let mkIngressRule =
         ({ host = Some host
         , http = Some
             { paths =
-                [ { path = None Text
+                [ { path = Some "/"
                   , backend =
                       { serviceName = _params.serviceName
                       , servicePort = <Int = _params.servicePort | String : Text>
