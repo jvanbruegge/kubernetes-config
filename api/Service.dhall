@@ -4,4 +4,5 @@ in
     { name : Text
     , type : Optional Text
     , ports : Optional (List Port)
+    , externalIPs : Optional (List Text)
     }
