@@ -14,4 +14,5 @@ in \(_params : { name : Text, image : Text }) ->
     , ports = None (List Port)
     , volumeMounts = None (List VolumeMount)
     , readinessProbe = None Probe
+    , livenessProbe = None Probe
     } : ./Container.dhall

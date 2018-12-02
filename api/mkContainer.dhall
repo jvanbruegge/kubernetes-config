@@ -10,6 +10,7 @@ in \(c : ./Container.dhall) ->
     , imagePullPolicy = Some "IfNotPresent"
     , ports = c.ports
     , readinessProbe = c.readinessProbe
+    , livenessProbe = c.livenessProbe
     , args = c.args
     , command = c.command
     , securityContext = c.securityContext

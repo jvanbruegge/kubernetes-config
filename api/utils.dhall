@@ -18,7 +18,7 @@ let addCapabilities : List Text -> SecurityContext
             }
         }
 
-let getProbe : { path : Text, port : Natural, scheme : Text } -> Probe
+let getHTTPProbe : { path : Text, port : Natural, scheme : Text } -> Probe
     = \(_params : { path : Text, port : Natural, scheme : Text }) ->
         defaultProbe
         //
@@ -30,12 +30,20 @@ let getProbe : { path : Text, port : Natural, scheme : Text } -> Probe
             })
         } : Probe
 
+let getExecProbe : { command : List Text } -> Probe
+    = \(_params : { command : List Text }) ->
+        defaultProbe
+        //
+        { exec = Some { command = Some _params.command } }
+        : Probe
+
 let prepend : Text -> Text -> Text
     = \(prefix : Text) -> \(str : Text) -> prefix ++ str
 
 in
     { fromMaybe = fromMaybe
     , addCapabilities = addCapabilities
-    , httpGetProbe = getProbe
+    , httpGetProbe = getHTTPProbe
+    , execProbe = getExecProbe
     , prepend = prepend
     }

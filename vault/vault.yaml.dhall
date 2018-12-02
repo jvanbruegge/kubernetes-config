@@ -35,11 +35,6 @@ let vaultContainer =
             , name = "vault-configmap"
             }
         ]
-    {-, readinessProbe = Some (utils.httpGetProbe
-        { path = "/v1/sys/health?standbyok=true"
-        , port = config.port
-        , scheme = "HTTP"
-        })-}
     } : ../api/Container.dhall
 
 let config =

@@ -13,4 +13,5 @@ in { name : Text
 , ports : Optional (List Port)
 , volumeMounts: Optional (List VolumeMount)
 , readinessProbe : Optional Probe
+, livenessProbe : Optional Probe
 }

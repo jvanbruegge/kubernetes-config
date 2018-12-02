@@ -1,4 +1,6 @@
 *.yaml
 *.yml
 
-setup/generated/
+vault_keys.txt
+
+generated/

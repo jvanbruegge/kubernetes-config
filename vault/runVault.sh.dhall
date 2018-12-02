@@ -1,7 +1,7 @@
 let config = ./config.dhall
 
 in ''
-#!/bin/bash
+#!/bin/sh
 
 vaultDir='' ++ config.path ++ ''
 
