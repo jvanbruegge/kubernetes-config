@@ -30,7 +30,7 @@ in \(_params :
     }) ->
         defaultIngress
             { metadata =
-                defaultMetadata { name = "vault" }
+                defaultMetadata { name = _params.serviceName }
                 //
                 { annotations = _params.annotations }
             }

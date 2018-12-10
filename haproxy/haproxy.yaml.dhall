@@ -14,6 +14,7 @@ let haProxyContainer =
     { args = Some
         [ "--default-backend-service=default/ingress-default-backend"
         , "--configmap=default/haproxy-config"
+        , "--tcp-services-configmap=default/haproxy-tcp-config"
         , "--reload-strategy=native"
         ]
     , env = Some
