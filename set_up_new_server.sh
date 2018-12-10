@@ -62,8 +62,14 @@ fi
 
 echo ""
 
+./applyDir.sh volumes
 ./applyDir.sh haproxy
 ./applyDir.sh vault
+
+echo ""
+echo "Waiting for vault to start up"
+
+kubectl wait --for=condition=ready --timeout=3000s pods vault-0
 
 echo ""
 
