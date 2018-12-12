@@ -5,7 +5,7 @@ let PersistentVolumeClaim = ../dhall-kubernetes/types/io.k8s.api.core.v1.Persist
 let defaultVolume = ../dhall-kubernetes/default/io.k8s.api.core.v1.Volume.dhall
 let defaultConfigMap = ../dhall-kubernetes/default/io.k8s.api.core.v1.ConfigMapVolumeSource.dhall
 
-in \(v : ./Volume.dhall) ->
+in \(v : ./SimpleVolume.dhall) ->
     let isPVC = merge
         { PVC = \(x : Text) -> True, ConfigMap = \(x : Text) -> False }
         v.volumeType

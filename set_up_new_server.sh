@@ -21,6 +21,10 @@ if [ ! -e "$dir/ca.key" ]; then
     cp "$dir/ca.pem" "$dir/ca.crt"
 fi
 
+set +e
+kubectl create secret generic root-ca --from-file="$dir/ca.crt"
+set -e
+
 function createCert {
     user=$1
 
@@ -31,8 +35,14 @@ function createCert {
         openssl req -new -key "$dir/$user.key" -out "$dir/$user.csr" \
             -config "setup/$user.conf"
 
-        openssl x509 -req -in "$dir/$user.csr" -CA "$dir/ca.crt" \
-            -CAkey "$dir/ca.key" -CAcreateserial -out "$dir/$user.crt" -days 500
+        if [ -e "setup/$user.ext" ]; then
+            openssl x509 -req -in "$dir/$user.csr" -CA "$dir/ca.crt" \
+                -CAkey "$dir/ca.key" -CAcreateserial -out "$dir/$user.crt" -days 500 \
+                -extfile "setup/$user.ext"
+        else
+            openssl x509 -req -in "$dir/$user.csr" -CA "$dir/ca.crt" \
+                -CAkey "$dir/ca.key" -CAcreateserial -out "$dir/$user.crt" -days 500
+        fi
     fi
 }
 
@@ -65,6 +75,8 @@ echo ""
 ./applyDir.sh volumes
 ./applyDir.sh haproxy
 ./applyDir.sh vault
+
+sleep 5
 
 echo ""
 echo "Waiting for vault to start up"
@@ -123,5 +135,39 @@ for name in pki_int_outside pki_int_inside; do
                 -out "$dir/$name.crt" -days 720 -config setup/ca.conf
 
         vault write "$name/intermediate/set-signed" certificate="@$dir/$name.crt"
+
+        vault write "$name/roles/get-cert" \
+            allowed_domains=cerberus-systems.de,cerberus-systems.com,svc.cluster.local \
+            allow_subdomains=true max_ttl=1860h
     fi
 done
+
+set +e
+vault auth enable kubernetes
+res=$?
+set -e
+
+if [[ $res == 0 ]]; then
+    echo "Configuring vault kubernetes authentification"
+
+    accountPath="/run/secrets/kubernetes.io/serviceaccount"
+    kubeCert=$(kubectl exec -it vault-0 -- sh -c "cat $accountPath/ca.crt")
+    serviceToken=$(kubectl exec -it vault-0 -- sh -c "cat $accountPath/token")
+
+    echo "$kubeCert" > "$dir/kubernetes_ca.crt"
+
+    vault write auth/kubernetes/config \
+        kubernetes_host='https://kubernetes.default.svc.cluster.local' \
+        kubernetes_ca_cert="@$dir/kubernetes_ca.crt" \
+        token_reviewer_jwt="$serviceToken"
+
+    dhall-to-text < vault/policies/get-cert.hcl.dhall \
+       | vault policy write get-cert -
+
+    vault write auth/kubernetes/role/get-cert \
+       bound_service_account_names=default \
+       bound_service_account_namespaces='*' \
+       generate_lease=true policies=get-cert ttl=2h
+fi
+
+./applyDir.sh ldap

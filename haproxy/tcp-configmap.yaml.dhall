@@ -4,4 +4,4 @@ let defaultMetadata = ../dhall-kubernetes/default/io.k8s.apimachinery.pkg.apis.m
 in
     defaultConfigMap { metadata = defaultMetadata { name = "haproxy-tcp-config" } }
     //
-    { data = Some [ { mapKey = "389", mapValue = "default/openldap:389" } ] }
+    { data = Some [ { mapKey = "636", mapValue = "default/openldap:636" } ] }

@@ -44,9 +44,14 @@ let config =
         }
     //
     { volumes = Some
-        [ { name = volumeName, volumeType = <PVC = "data-claim" | ConfigMap : Text> }
-        , { name = "vault-configmap", volumeType = <ConfigMap = "vault-config" | PVC : Text> }
+        [ ../api/mkVolume.dhall
+            { name = volumeName, volumeType = <PVC = "data-claim" | ConfigMap : Text> }
+        , ../api/mkVolume.dhall
+            { name = "vault-configmap"
+            , volumeType = <ConfigMap = "vault-config" | PVC : Text>
+            }
         ]
+    , serviceAccountName = Some "vault-auth"
     }
 
 in ../api/mkStatefulSet.dhall config

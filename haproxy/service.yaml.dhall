@@ -8,7 +8,7 @@ in ../api/mkService.dhall (
         [ defaultPort 80 // { name = Some "http" }
         , defaultPort 443 // { name = Some "https" }
         , defaultPort 1936 // { name = Some "stats" }
-        , defaultPort 389 // { name = Some "ldap" }
+        , defaultPort 636 // { name = Some "ldaps" }
         ]
     }
 )

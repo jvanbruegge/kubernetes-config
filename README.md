@@ -4,7 +4,7 @@ All configuration is written in [dhall](https://github.com/dhall-lang/dhall-lang
 
 Run
 ```
-stack install dhall-1.19.0 dhall-json-1.2.5 --resolver=nightly-2018-11-12
+stack install dhall-1.19.0 dhall-text-1.0.14 dhall-json-1.2.5 --resolver=nightly-2018-11-12
 ```
 to install everything
 

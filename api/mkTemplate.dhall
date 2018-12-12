@@ -16,8 +16,7 @@ in \(metadata : Metadata) -> \(_param : ./SimpleDeployment.dhall) ->
                 ./Container.dhall Container ./mkContainer.dhall _param.containers
             }
         //
-        { volumes = maybeMap (List ./Volume.dhall) (List Volume)
-              (listMap ./Volume.dhall Volume ./mkVolume.dhall) _param.volumes
+        { volumes = _param.volumes
         , initContainers = maybeMap (List ./Container.dhall) (List Container)
               (listMap ./Container.dhall Container ./mkContainer.dhall) _param.initContainers
         , serviceAccountName = _param.serviceAccountName
