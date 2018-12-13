@@ -96,7 +96,7 @@ let vaultAuthenticator =
           , value = Some "https://vault.default.svc.cluster.local:8300"
           , valueFrom = None EnvVarSource }
         , { name = "VAULT_CACERT"
-          , value = Some "/var/certs/ca.crt"
+          , value = Some "/var/certs/pki_int_outside.crt"
           , valueFrom = None EnvVarSource }
         ]
     , volumeMounts = Some
@@ -132,7 +132,7 @@ let config =
             { emptyDir = Some (defaultDirVolumeSource // { medium = Some "Memory" }) }
         , defaultVolume { name = "root-ca" }
             //
-            { secret = Some (defaultSecret // { secretName = Some "root-ca" }) }
+            { secret = Some (defaultSecret // { secretName = Some "ca-outside" }) }
         ]
     , initContainers = Some [vaultAuthenticator, consulTemplateContainer]
     }

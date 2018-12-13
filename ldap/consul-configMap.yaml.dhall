@@ -32,7 +32,7 @@ vault {
         enabled = true
         verify = true
 
-        ca_cert = "/var/certs/ca.crt"
+        ca_cert = "/var/certs/pki_int_outside.crt"
     }
 }
 ''

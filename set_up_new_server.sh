@@ -1,10 +1,14 @@
 #!/bin/bash
 
-set -e
-
 dir="generated"
 
 mkdir -p "$dir"
+
+rm $dir/vault*
+
+cat ~/.ssh/known_hosts | grep -v 192.168.99.100 > ~/.ssh/known_hosts
+
+set -e
 
 if [ ! -e "$dir/ca.key" ]; then
     echo "Generating root CA key and certificate"
@@ -20,10 +24,6 @@ if [ ! -e "$dir/ca.key" ]; then
     openssl x509 -in "$dir/ca.crt" -out "$dir/ca.pem"
     cp "$dir/ca.pem" "$dir/ca.crt"
 fi
-
-set +e
-kubectl create secret generic root-ca --from-file="$dir/ca.crt"
-set -e
 
 function createCert {
     user=$1
@@ -50,25 +50,26 @@ echo ""
 
 createCert vault
 
-if [ -x "$(command -v minikube 2>/dev/null)" ]; then
-    set +e
-    ssh -i $(minikube ssh-key) docker@$(minikube ip) \
-        'su -c "cat /data/vault/ssl/vault.key"' > /dev/null 2>&1
-    res=$?
-    set -e
-
-    if [[ $res != 0 ]]; then
+function transferVaultCert() {
+    ca=$1
+    if [ -x "$(command -v minikube 2>/dev/null)" ]; then
         echo "Copying vault certificate and key to server"
         minikube ssh 'su -c "mkdir -p /data/vault/ssl"'
 
-        for file in vault.key vault.crt ca.crt; do
+        for file in vault.key vault.crt "$ca"; do
+            filename="$file"
+            if [[ "$file" == "$ca" ]]; then
+                filename="ca.crt"
+            fi
             ssh -i $(minikube ssh-key) docker@$(minikube ip) \
-                "su -c 'cat > /data/vault/ssl/$file'" < "$dir/$file"
+                "su -c 'cat > /data/vault/ssl/$filename'" < "$dir/$file"
         done
+    else
+        echo "Please copy the certificates manually to the server"
     fi
-else
-    echo "Please copy the certificates manually to the server"
-fi
+}
+
+transferVaultCert ca.crt
 
 echo ""
 
@@ -97,18 +98,22 @@ vaultKeys=$(vault operator init 2> /dev/null)
 res=$?
 set -e
 
-if [[ $res == 0 ]]; then
-    echo "$vaultKeys" > vault_keys.txt
-
-    echo "Initialized vault - find keys in vault_keys.txt"
-
+function unsealVault() {
     for i in 1 2 3; do
-        key=$(echo "$vaultKeys" | grep "Unseal Key $i:" | awk '{print $NF}')
+        key=$(cat "vault_keys.txt" | grep "Unseal Key $i:" | awk '{print $NF}')
 
         vault operator unseal "$key" > /dev/null
     done
     echo "Vault unsealed"
+}
+
+if [[ $res == 0 ]]; then
+    echo "$vaultKeys" > vault_keys.txt
+
+    echo "Initialized vault - find keys in vault_keys.txt"
 fi
+
+unsealVault
 
 token=$(cat vault_keys.txt | grep "Initial Root Token: " | awk '{print $NF}')
 export VAULT_TOKEN="$token"
@@ -134,6 +139,9 @@ for name in pki_int_outside pki_int_inside; do
         openssl ca -extensions intermediate-ca_ext -in "$dir/$name.csr" \
                 -out "$dir/$name.crt" -days 720 -config setup/ca.conf
 
+        # Remove text encoding from file
+        openssl x509 -in "$dir/$name.crt" -out "$dir/$name.crt"
+
         vault write "$name/intermediate/set-signed" certificate="@$dir/$name.crt"
 
         vault write "$name/roles/get-cert" \
@@ -143,7 +151,48 @@ for name in pki_int_outside pki_int_inside; do
 done
 
 set +e
-vault auth enable kubernetes
+kubectl delete secret ca-inside
+kubectl delete secret ca-outside
+set -e
+kubectl create secret generic ca-inside --from-file="$dir/pki_int_inside.crt"
+kubectl create secret generic ca-outside --from-file="$dir/pki_int_outside.crt"
+
+function getIntermediateCert() {
+    scope=$1
+    user=$2
+
+    if [[ "$user" == "*.users" ]]; then
+        result=$(vault write "pki_int_$scope/issue/get-cert" -format="json" \
+            common_name="$user.cerberus-systems.de")
+    else
+        result=$(vault write "pki_int_$scope/issue/get-cert" -format="json" \
+            common_name="$user.cerberus-systems.de" \
+            alt_names="$user.cerberus-systems.com,$user.default.svc.cluster.local")
+    fi
+
+    echo "$result" | jq -r '.data.certificate' > "$dir/$user.crt"
+    echo "$result" | jq -r '.data.private_key' > "$dir/$user.key"
+}
+
+echo "Getting certificate for vault from intermediate CA"
+getIntermediateCert outside vault
+getIntermediateCert outside vault-operator
+
+transferVaultCert pki_int_outside.crt
+
+kubectl delete statefulsets.apps vault
+kubectl wait --for=delete --timeout=3000s pods vault-0
+
+./applyDir.sh vault
+export VAULT_CACERT="$dir/pki_int_outside.crt"
+sleep 5
+
+kubectl wait --for=condition=ready --timeout=3000s pods vault-0
+
+unsealVault
+
+set +e
+vault auth enable kubernetes 2> /dev/null
 res=$?
 set -e
 
@@ -171,3 +220,8 @@ if [[ $res == 0 ]]; then
 fi
 
 ./applyDir.sh ldap
+
+user="jan.users"
+getIntermediateCert outside "$user"
+
+openssl pkcs12 -export -in "$dir/$user.crt" -inkey "$dir/$user.key" -out "$dir/$user.p12"
