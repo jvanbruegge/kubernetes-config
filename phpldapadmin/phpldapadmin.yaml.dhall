@@ -11,41 +11,32 @@ let utils = ../api/utils.dhall
 
 let volumeName = "store"
 
-let ldapContainer =
+let adminContainer =
     defaultContainer
-        { name = "openldap"
-        , image = "registry.hub.docker.com/osixia/openldap:1.2.2"
+        { name = "phpldapadmin"
+        , image = "registry.hub.docker.com/osixia/phpldapadmin:0.7.2"
         }
     //
     { env = Some
-        [ { name = "LDAP_ORGANISATION"
-          , value = Some "Cerberus Systems"
+        [ { name = "PHPLDAPADMIN_LDAP_HOSTS"
+          , value = Some "#PYTHON2BASH:[{'ldaps://ldap.cerberus-systems.de/': [{'server': [{'tls': True, 'port': 0}]}]}]"
           , valueFrom = None EnvVarSource }
-        , { name = "LDAP_DOMAIN"
-          , value = Some "cerberus-systems.de"
+        , { name = "PHPLDAPADMIN_SERVER_PATH"
+          , value = Some "/"
           , valueFrom = None EnvVarSource }
-        , { name = "LDAP_ADMIN_PASSWORD"
-          , value = Some "admin"
-          , valueFrom = None EnvVarSource }
-        , { name = "LDAP_TLS_ENFORCE"
+        , { name = "PHPLDAPADMIN_HTTPS"
           , value = Some "true"
           , valueFrom = None EnvVarSource }
         ]
-    , ports = Some [defaultPort { containerPort = 636, name = "ldaps" }]
+    , ports = Some [defaultPort { containerPort = 443, name = "https" }]
     , volumeMounts = Some
         [ defaultVolumeMount
-            { mountPath = "/var/lib/ldap"
-            , name = volumeName
-            }
-          // { subPath = Some "ldap/data" }
-        , defaultVolumeMount
-            { mountPath = "/etc/ldap/slapd.d"
-            , name = volumeName
-            }
-          // { subPath = Some "ldap/config" }
-        , defaultVolumeMount
-            { mountPath = "/container/service/slapd/assets/certs"
+            { mountPath = "/container/service/ldap-client/assets/certs/"
             , name = "ldap-certs"
+            }
+        , defaultVolumeMount
+            { mountPath = "/container/service/phpldapadmin/assets/apache2/certs/"
+            , name = "https-certs"
             }
         ]
     } : ../api/Container.dhall
@@ -61,7 +52,7 @@ let consulTemplateContainer =
     , volumeMounts = Some
         [ defaultVolumeMount
             { mountPath = "/etc/consul-template"
-            , name = "consul-config"
+            , name = "phpldapadmin-consul-config"
             }
         , defaultVolumeMount
             { mountPath = "/home/consul-template"
@@ -69,11 +60,19 @@ let consulTemplateContainer =
             }
         , defaultVolumeMount
             { mountPath = "/var/certs"
+            , name = "ca-outside"
+            }
+        , defaultVolumeMount
+            { mountPath = "/certs"
             , name = "root-ca"
             }
         , defaultVolumeMount
             { mountPath = "/var/ldap-certs"
             , name = "ldap-certs"
+            }
+        , defaultVolumeMount
+            { mountPath = "/var/https-certs"
+            , name = "https-certs"
             }
         ]
     }
@@ -106,23 +105,23 @@ let vaultAuthenticator =
             }
         , defaultVolumeMount
             { mountPath = "/var/certs"
-            , name = "root-ca"
+            , name = "ca-outside"
             }
         ]
     }
 
 let config =
     defaultSimpleDeployment
-        { name = "openldap"
-        , containers = [ldapContainer]
+        { name = "phpldapadmin"
+        , containers = [adminContainer]
         }
     //
     { volumes = Some
         [ ../api/mkVolume.dhall
             { name = volumeName, volumeType = <PVC = "data-claim" | ConfigMap : Text> }
         , ../api/mkVolume.dhall
-            { name = "consul-config"
-            , volumeType = <PVC : Text | ConfigMap = "ldap-consul-template-config">
+            { name = "phpldapadmin-consul-config"
+            , volumeType = <PVC : Text | ConfigMap = "phpldapadmin-consul-template-config">
             }
         , defaultVolume { name = "vault-token" }
             //
@@ -130,9 +129,15 @@ let config =
         , defaultVolume { name = "ldap-certs" }
             //
             { emptyDir = Some (defaultDirVolumeSource // { medium = Some "Memory" }) }
-        , defaultVolume { name = "root-ca" }
+        , defaultVolume { name = "https-certs" }
+            //
+            { emptyDir = Some (defaultDirVolumeSource // { medium = Some "Memory" }) }
+        , defaultVolume { name = "ca-outside" }
             //
             { secret = Some (defaultSecret // { secretName = Some "ca-outside" }) }
+        , defaultVolume { name = "root-ca" }
+            //
+            { secret = Some (defaultSecret // { secretName = Some "root-ca" }) }
         ]
     , initContainers = Some [vaultAuthenticator, consulTemplateContainer]
     }

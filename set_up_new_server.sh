@@ -153,9 +153,11 @@ done
 set +e
 kubectl delete secret ca-inside
 kubectl delete secret ca-outside
+kubectl delete secret root-ca
 set -e
 kubectl create secret generic ca-inside --from-file="$dir/pki_int_inside.crt"
 kubectl create secret generic ca-outside --from-file="$dir/pki_int_outside.crt"
+kubectl create secret generic root-ca --from-file="$dir/ca.crt"
 
 function getIntermediateCert() {
     scope=$1
