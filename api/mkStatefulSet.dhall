@@ -7,7 +7,11 @@ let defaultMetadata = ../dhall-kubernetes/default/io.k8s.apimachinery.pkg.apis.m
 in \(set: ./SimpleDeployment.dhall) ->
     let m = { name = set.name }
     in
-        defaultSet { metadata = defaultMetadata m }
+        defaultSet { metadata =
+            defaultMetadata m
+            //
+            { namespace = Some set.namespace }
+        }
         //
         { spec = Some (
             defaultSpec
