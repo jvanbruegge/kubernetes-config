@@ -12,7 +12,7 @@ let volumeName = "store"
 let vaultContainer =
     defaultContainer
         { name = "vault"
-        , image = "registry.hub.docker.com/library/vault:0.11.5"
+        , image = "registry.hub.docker.com/cerberussystems/vault-secret-gen:1.0.0"
         }
     //
     { command = Some ["sh"]

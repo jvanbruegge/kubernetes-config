@@ -1,6 +1,7 @@
 #!/bin/bash
 
 dev=true
+dir="generated"
 
 if [[ ! -z "$1" ]]; then
     dev=false
@@ -9,8 +10,6 @@ fi
 if [[ $dev ]]; then
     ./startMinikube.sh create
 fi
-
-dir="generated"
 
 mkdir -p "$dir"
 
@@ -237,7 +236,13 @@ if [[ $res == 0 ]]; then
        generate_lease=true policies=get-cert ttl=2h
 fi
 
-./applyDir.sh ldap
+plugin_sha=$(kubectl exec --namespace=vault -it vault-0 -- sh -c "sha256sum /etc/vault/plugins/vault-secrets-gen" \
+    | cut -d ' ' -f 1)
+
+set +e
+vault write sys/plugins/catalog/secrets-gen sha_256="$plugin_sha" command="vault-secrets-gen"
+vault secrets enable -path="gen" -plugin-name="secrets-gen" plugin
+set -e
 
 user="jan.users"
 getIntermediateCert outside "$user"
@@ -249,3 +254,6 @@ for d in $(ls */volume*.yaml.dhall | xargs -n 1 dirname | uniq); do
         minikube ssh "su -c 'mkdir -p /data/$d'"
     fi
 done
+
+./applyDir.sh ldap
+./applyDir.sh phpldapadmin

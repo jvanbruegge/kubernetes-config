@@ -66,7 +66,7 @@ let run = ''
 export VAULT_TOKEN=$(cat /home/consul-template/.vault-token)
 docker-entrypoint.sh -once -config "/etc/consul-template/config.hcl"
 
-while read s; do
+while read s && [[ ! -z "$s" ]]; do
     cp -v /var/root-ca/ca.crt "/var/generated/$s"
 done < /etc/consul-template/rootCaLocations.txt
 ''

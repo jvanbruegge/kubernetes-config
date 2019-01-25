@@ -4,6 +4,8 @@ in ''
 ui = true
 api_addr = "https://vault.cerberus-systems.de"
 
+plugin_directory = "/etc/vault/plugins"
+
 storage "file" {
   path = "'' ++ config.path ++ ''"
 }
