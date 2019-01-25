@@ -48,4 +48,4 @@ let config =
         , containers = [adminContainer]
         }
 
-in ../api/mkStatefulSet.dhall (../helpers/withCerts.dhall "ldap-certs" config)
+in ../api/mkDeployment.dhall (../helpers/withCerts.dhall "ldap-certs" config)
