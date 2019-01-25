@@ -3,6 +3,7 @@ let utils = ../api/utils.dhall
 
 in ../api/defaultIngress.dhall
     { hostnames = map Text Text (utils.prepend "phpldapadmin.") ../hostnames.dhall
+    , namespace = "phpldapadmin"
     , serviceName = "phpldapadmin"
     , servicePort = 443
     , annotations = Some

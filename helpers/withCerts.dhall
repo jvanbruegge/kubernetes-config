@@ -25,7 +25,7 @@ let vaultAuthenticator =
           , value = Some "get-cert"
           , valueFrom = None EnvVarSource }
         , { name = "VAULT_ADDR"
-          , value = Some "https://vault.default.svc.cluster.local:8300"
+          , value = Some "https://vault.vault.svc.cluster.local:8300"
           , valueFrom = None EnvVarSource }
         , { name = "VAULT_CACERT"
           , value = Some "/var/certs/pki_int_outside.crt"
@@ -38,7 +38,7 @@ let vaultAuthenticator =
             }
         , defaultVolumeMount
             { mountPath = "/var/certs"
-            , name = "root-ca"
+            , name = "consul-template-ca-outside"
             }
         ]
     }
@@ -63,7 +63,11 @@ let consulTemplateContainer = \(certMount : Text) ->
             }
         , defaultVolumeMount
             { mountPath = "/var/certs"
-            , name = "root-ca"
+            , name = "consul-template-ca-outside"
+            }
+        , defaultVolumeMount
+            { mountPath = "/var/root-ca"
+            , name = "consul-template-root-ca"
             }
         , defaultVolumeMount
             { mountPath = "/var/generated"
@@ -81,7 +85,10 @@ let withCerts = \(certVolumeName : Text) -> \(deployment : ../api/SimpleDeployme
         [ defaultVolume { name = certVolumeName }
             //
             { emptyDir = Some (defaultDirVolumeSource // { medium = Some "Memory" }) }
-        , defaultVolume { name = "root-ca" }
+        , defaultVolume { name = "consul-template-root-ca" }
+            //
+            { secret = Some (defaultSecret // { secretName = Some "root-ca" }) }
+        , defaultVolume { name = "consul-template-ca-outside" }
             //
             { secret = Some (defaultSecret // { secretName = Some "ca-outside" }) }
         , defaultVolume { name = "vault-token" }

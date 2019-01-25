@@ -1,5 +1,15 @@
 #!/bin/bash
 
+dev=true
+
+if [[ ! -z "$1" ]]; then
+    dev=false
+fi
+
+if [[ $dev ]]; then
+    ./startMinikube.sh create
+fi
+
 dir="generated"
 
 mkdir -p "$dir"
@@ -52,7 +62,7 @@ createCert vault
 
 function transferVaultCert() {
     ca=$1
-    if [ -x "$(command -v minikube 2>/dev/null)" ]; then
+    if [[ $dev ]]; then
         echo "Copying vault certificate and key to server"
         minikube ssh 'su -c "mkdir -p /data/vault/ssl"'
 
@@ -73,7 +83,6 @@ transferVaultCert ca.crt
 
 echo ""
 
-./applyDir.sh volumes
 ./applyDir.sh haproxy
 ./applyDir.sh vault
 
@@ -82,11 +91,13 @@ sleep 5
 echo ""
 echo "Waiting for vault to start up"
 
-kubectl wait --for=condition=ready --timeout=3000s pods vault-0
+kubectl wait --namespace=vault --for=condition=ready --timeout=3000s pods vault-0
 
 echo ""
 
 createCert "vault-operator"
+
+sleep 10
 
 export VAULT_ADDR="https://vault.cerberus-systems.de"
 export VAULT_CACERT="$dir/ca.crt"
@@ -162,6 +173,11 @@ kubectl create secret generic root-ca --from-file="$dir/ca.crt"
 function getIntermediateCert() {
     scope=$1
     user=$2
+    namespace=$3
+
+    if [[ -z "$namespace" ]]; then
+        namespace="default"
+    fi
 
     if [[ "$user" == "*.users" ]]; then
         result=$(vault write "pki_int_$scope/issue/get-cert" -format="json" \
@@ -169,7 +185,7 @@ function getIntermediateCert() {
     else
         result=$(vault write "pki_int_$scope/issue/get-cert" -format="json" \
             common_name="$user.cerberus-systems.de" \
-            alt_names="$user.cerberus-systems.com,$user.default.svc.cluster.local")
+            alt_names="$user.cerberus-systems.com,$user.$namespace.svc.cluster.local")
     fi
 
     echo "$result" | jq -r '.data.certificate' > "$dir/$user.crt"
@@ -177,19 +193,19 @@ function getIntermediateCert() {
 }
 
 echo "Getting certificate for vault from intermediate CA"
-getIntermediateCert outside vault
+getIntermediateCert outside vault vault
 getIntermediateCert outside vault-operator
 
 transferVaultCert pki_int_outside.crt
 
-kubectl delete statefulsets.apps vault
-kubectl wait --for=delete --timeout=3000s pods vault-0
+kubectl delete --namespace=vault statefulsets.apps vault
+kubectl wait --namespace=vault --for=delete --timeout=3000s pods vault-0
 
 ./applyDir.sh vault
 export VAULT_CACERT="$dir/pki_int_outside.crt"
 sleep 5
 
-kubectl wait --for=condition=ready --timeout=3000s pods vault-0
+kubectl wait --namespace=vault --for=condition=ready --timeout=3000s pods vault-0
 
 unsealVault
 
@@ -202,8 +218,8 @@ if [[ $res == 0 ]]; then
     echo "Configuring vault kubernetes authentification"
 
     accountPath="/run/secrets/kubernetes.io/serviceaccount"
-    kubeCert=$(kubectl exec -it vault-0 -- sh -c "cat $accountPath/ca.crt")
-    serviceToken=$(kubectl exec -it vault-0 -- sh -c "cat $accountPath/token")
+    kubeCert=$(kubectl exec --namespace=vault -it vault-0 -- sh -c "cat $accountPath/ca.crt")
+    serviceToken=$(kubectl exec --namespace=vault -it vault-0 -- sh -c "cat $accountPath/token")
 
     echo "$kubeCert" > "$dir/kubernetes_ca.crt"
 
@@ -227,3 +243,9 @@ user="jan.users"
 getIntermediateCert outside "$user"
 
 openssl pkcs12 -export -in "$dir/$user.crt" -inkey "$dir/$user.key" -out "$dir/$user.p12"
+
+for d in $(ls */volume*.yaml.dhall | xargs -n 1 dirname | uniq); do
+    if [[ $dev ]]; then
+        minikube ssh "su -c 'mkdir -p /data/$d'"
+    fi
+done

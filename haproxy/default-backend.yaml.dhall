@@ -14,6 +14,7 @@ let backendContainer =
 let config =
     defaultSimpleDeployment
         { name = "ingress-default-backend"
+        , namespace = "haproxy"
         , containers = [backendContainer]
         }
 

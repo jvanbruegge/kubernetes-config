@@ -29,7 +29,6 @@ let vaultContainer =
             { mountPath = config.path
             , name = volumeName
             }
-          // { subPath = Some "vault" }
         , defaultVolumeMount
             { mountPath = "/scripts"
             , name = "vault-configmap"
@@ -40,12 +39,13 @@ let vaultContainer =
 let config =
     defaultSimpleDeployment
         { name = "vault"
+        , namespace = "vault"
         , containers = [vaultContainer]
         }
     //
     { volumes = Some
         [ ../api/mkVolume.dhall
-            { name = volumeName, volumeType = <PVC = "data-claim" | ConfigMap : Text> }
+            { name = volumeName, volumeType = <PVC = "vault-claim" | ConfigMap : Text> }
         , ../api/mkVolume.dhall
             { name = "vault-configmap"
             , volumeType = <ConfigMap = "vault-config" | PVC : Text>

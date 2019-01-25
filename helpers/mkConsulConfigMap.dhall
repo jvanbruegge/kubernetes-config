@@ -29,7 +29,7 @@ let certTemplate = \(subdomain : Text) -> \(namespace : Text) -> \(entry : Text)
 
 let baseConfig = ''
 vault {
-    address = "https://vault.default.svc.cluster.local:8300"
+    address = "https://vault.vault.svc.cluster.local:8300"
     grace = "1h"
     renew_token = true
 
@@ -42,11 +42,20 @@ vault {
 }
 ''
 
-let templateConfig = \(filenames : List Text) ->
-    let templates = prelude.`List`.map Text Text
-        (\(x : Text) -> ''template {
-            source = "/etc/consul-template/'' ++ x ++ ''.tpl"
-            destination = "/var/generated/'' ++ x ++ ''"
+let Location = { subdir : Optional Text, name : Text }
+
+let concatWith = \(sep : Text) -> \(l : Location) ->
+    Optional/fold Text
+        (prelude.`Optional`.map Text Text (\(x : Text) -> x ++ sep ++ l.name) l.subdir)
+        Text
+        (\(x : Text) -> x)
+        l.name
+
+let templateConfig = \(filenames : List Location) ->
+    let templates = prelude.`List`.map Location Text
+        (\(x : Location) -> ''template {
+            source = "/etc/consul-template/'' ++ concatWith "_" x ++ ''.tpl"
+            destination = "/var/generated/'' ++ concatWith "/" x ++ ''"
         }'')
         filenames
     in prelude.`Text`.concatSep "\n" (templates # [baseConfig])
@@ -56,19 +65,34 @@ let run = ''
 
 export VAULT_TOKEN=$(cat /home/consul-template/.vault-token)
 docker-entrypoint.sh -once -config "/etc/consul-template/config.hcl"
+
+while read s; do
+    cp -v /var/root-ca/ca.crt "/var/generated/$s"
+done < /etc/consul-template/rootCaLocations.txt
 ''
 
+let expand = \(subdomain : Text) -> \(namespace : Text) -> \(data : Text) ->
+    let mkTemplate = certTemplate subdomain namespace
+    in prelude.`List`.map Location { mapKey : Text, mapValue : Text }
+        (\(x : Location) -> { mapKey = concatWith "_" x ++ ".tpl", mapValue = mkTemplate data })
+
+let mkRootCaLocations = \(l : List Location) ->
+    prelude.`Text`.concatSep "\n"
+        (prelude.`List`.map Location Text (concatWith "/") l)
+    ++ "\n"
+
 let CertOptions =
-    { certFilename : Text
-    , keyFilename : Text
-    , caFilename : Text
+    { certFilenames : List Location
+    , keyFilenames : List Location
+    , caFilenames : List Location
+    , rootCaFilenames : List Location
     , namespace : Text
     , subdomain : Text
     }
 
 let mkConfigMap = \(_params : CertOptions) ->
-    let filenames = [_params.certFilename, _params.keyFilename, _params.caFilename]
-    let mkTemplate = certTemplate _params.subdomain _params.namespace
+    let filenames = _params.certFilenames # _params.keyFilenames # _params.caFilenames
+    let exp = expand _params.subdomain _params.namespace
 
     in defaultConfigMap { metadata =
         defaultMetadata { name = "consul-template-config" }
@@ -76,13 +100,17 @@ let mkConfigMap = \(_params : CertOptions) ->
         { namespace = Some _params.namespace }
     }
     //
-    { data = Some
-        [ { mapKey = _params.certFilename ++ ".tpl", mapValue = mkTemplate "certificate" }
-        , { mapKey = _params.keyFilename ++ ".tpl", mapValue = mkTemplate "private_key" }
-        , { mapKey = _params.caFilename ++ ".tpl", mapValue = mkTemplate "issuing_ca" }
-        , { mapKey = "config.hcl", mapValue = templateConfig filenames }
+    { data = Some (
+        exp "certificate" _params.certFilenames
+        #
+        exp "private_key" _params.keyFilenames
+        #
+        exp "issuing_ca" _params.caFilenames
+        #
+        [ { mapKey = "config.hcl", mapValue = templateConfig filenames }
+        , { mapKey = "rootCaLocations.txt", mapValue = mkRootCaLocations _params.rootCaFilenames }
         , { mapKey = "run.sh", mapValue = run }
-        ]
+        ])
     }
 
 in mkConfigMap

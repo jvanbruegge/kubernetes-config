@@ -4,7 +4,11 @@ let defaultSpec = ../dhall-kubernetes/default/io.k8s.api.core.v1.ServiceSpec.dha
 let defaultMetadata = ../dhall-kubernetes/default/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta.dhall
 
 in \(s : ./Service.dhall) ->
-    defaultService { metadata = defaultMetadata { name = s.name } }
+    defaultService { metadata =
+        defaultMetadata { name = s.name }
+        //
+        { namespace = Some s.namespace }
+    }
     //
     { spec = Some (
         defaultSpec

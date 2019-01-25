@@ -3,7 +3,7 @@ let defaultMetadata = ../dhall-kubernetes/default/io.k8s.apimachinery.pkg.apis.m
 let defaultRule = ../dhall-kubernetes/default/io.k8s.api.rbac.v1.PolicyRule.dhall
 
 in defaultRole
-    { metadata = defaultMetadata { name = "ingress-controller" }
+    { metadata = defaultMetadata { name = "ingress-controller" } // { namespace = Some "haproxy" }
     , rules =
         [ defaultRule { verbs = ["get"] }
           //

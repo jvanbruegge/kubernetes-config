@@ -24,6 +24,7 @@ let mkIngressRule =
 
 in \(_params :
     { hostnames : List Text
+    , namespace : Text
     , serviceName : Text
     , servicePort : Natural
     , annotations : Optional (List { mapKey : Text, mapValue : Text })
@@ -32,7 +33,9 @@ in \(_params :
             { metadata =
                 defaultMetadata { name = _params.serviceName }
                 //
-                { annotations = _params.annotations }
+                { annotations = _params.annotations
+                , namespace = Some _params.namespace
+                }
             }
         //
         { spec = Some (

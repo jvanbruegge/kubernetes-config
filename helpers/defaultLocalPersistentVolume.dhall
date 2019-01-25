@@ -4,19 +4,28 @@ let defaultSpec = ../dhall-kubernetes/default/io.k8s.api.core.v1.PersistentVolum
 let defaultSelectorTerm = ../dhall-kubernetes/default/io.k8s.api.core.v1.NodeSelectorTerm.dhall
 let defaultMetadata = ../dhall-kubernetes/default/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta.dhall
 
-let name = "persistent-data"
+let VolumeConfig =
+    { name : Text
+    , namespace : Text
+    , size : Text
+    , directory : Text
+    }
 
-in
-    defaultVolume { metadata = defaultMetadata { name = name } }
+let mkLocalPersistentVolume = \(_params : VolumeConfig) ->
+    defaultVolume { metadata =
+        defaultMetadata { name = _params.name }
+        //
+        { namespace = Some _params.namespace }
+    }
     //
     { spec = Some (
         defaultSpec
         //
-        { capacity = Some [{ mapKey = "storage", mapValue = "200Gi" }]
+        { capacity = Some [{ mapKey = "storage", mapValue = _params.size }]
         , accessModes = Some ["ReadWriteOnce"]
         , persistentVolumeReclaimPolicy = Some "Retain"
         , storageClassName = Some "local-storage"
-        , local = Some { path = "/data" }
+        , local = Some { path = "/data/" ++ _params.directory }
         , nodeAffinity = Some
             { required = Some
                 { nodeSelectorTerms =
@@ -25,10 +34,12 @@ in
                     { matchExpressions = Some [
                         { key = "kubernetes.io/hostname"
                         , operator = "In"
-                        , values = Some ["vmd14423.contaboserver.net", "minikube"]
+                        , values = Some ../server-hostnames.dhall
                         }]
                     }]
                 }
             }
         })
     } : PersistentVolume
+
+in mkLocalPersistentVolume

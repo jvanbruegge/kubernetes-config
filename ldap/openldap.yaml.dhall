@@ -7,8 +7,6 @@ let defaultSimpleDeployment = ../api/defaultSimpleDeployment.dhall
 
 let volumeName = "store"
 
-let withCerts = ../helpers/withCerts.dhall
-
 let ldapContainer =
     defaultContainer
         { name = "openldap"
@@ -35,12 +33,12 @@ let ldapContainer =
             { mountPath = "/var/lib/ldap"
             , name = volumeName
             }
-          // { subPath = Some "ldap/data" }
+          // { subPath = Some "data" }
         , defaultVolumeMount
             { mountPath = "/etc/ldap/slapd.d"
             , name = volumeName
             }
-          // { subPath = Some "ldap/config" }
+          // { subPath = Some "config" }
         , defaultVolumeMount
             { mountPath = "/container/service/slapd/assets/certs"
             , name = "ldap-certs"
@@ -57,8 +55,8 @@ let config =
     //
     { volumes = Some
         [ ../api/mkVolume.dhall
-            { name = volumeName, volumeType = <PVC = "data-claim" | ConfigMap : Text> }
+            { name = volumeName, volumeType = <PVC = "ldap-claim" | ConfigMap : Text> }
         ]
     }
 
-in ../api/mkStatefulSet.dhall (withCerts "ldap-certs" config)
+in ../api/mkStatefulSet.dhall (../helpers/withCerts.dhall "ldap-certs" config)

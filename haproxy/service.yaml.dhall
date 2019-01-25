@@ -1,7 +1,7 @@
 let defaultPort = ../api/defaultServicePort.dhall
 
 in ../api/mkService.dhall (
-    ../api/defaultService.dhall { name = "haproxy" }
+    ../api/defaultService.dhall { name = "haproxy", namespace = "haproxy" }
     //
     { externalIPs = Some ["5.189.142.109", ../minikube-ip.dhall]
     , ports = Some

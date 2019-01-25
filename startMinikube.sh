@@ -11,5 +11,7 @@ sudo systemctl restart dnsmasq
 
 echo "\"$ip\"" > minikube-ip.dhall
 
-./applyDir.sh haproxy
-./unseal_vault_dev.sh
+if [[ -z "$1" ]]; then
+    ./applyDir.sh haproxy
+    ./unseal_vault_dev.sh
+fi

@@ -12,9 +12,9 @@ let haProxyContainer =
         }
     //
     { args = Some
-        [ "--default-backend-service=default/ingress-default-backend"
-        , "--configmap=default/haproxy-config"
-        , "--tcp-services-configmap=default/haproxy-tcp-config"
+        [ "--default-backend-service=haproxy/ingress-default-backend"
+        , "--configmap=haproxy/haproxy-config"
+        , "--tcp-services-configmap=haproxy/haproxy-tcp-config"
         , "--reload-strategy=native"
         ]
     , env = Some
@@ -43,6 +43,7 @@ let haProxyContainer =
 let config =
     defaultSimpleDeployment
         { name = "haproxy"
+        , namespace = "haproxy"
         , containers = [haProxyContainer]
         }
     //

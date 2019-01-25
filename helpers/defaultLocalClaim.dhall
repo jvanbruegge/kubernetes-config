@@ -4,8 +4,18 @@ let defaultVolumeClaim = ../dhall-kubernetes/default/io.k8s.api.core.v1.Persiste
 let defaultSpec = ../dhall-kubernetes/default/io.k8s.api.core.v1.PersistentVolumeClaimSpec.dhall
 let defaultResources = ../dhall-kubernetes/default/io.k8s.api.core.v1.ResourceRequirements.dhall
 
-in
-    defaultVolumeClaim { metadata = defaultMetadata { name = "data-claim" } }
+let ClaimOptions =
+  { name : Text
+  , namespace : Text
+  , size : Text
+  }
+
+let mkLocalClaim = \(_params : ClaimOptions) ->
+    defaultVolumeClaim { metadata =
+        defaultMetadata { name = _params.name }
+        //
+        { namespace = Some _params.namespace }
+    }
     //
     { spec = Some (
         defaultSpec
@@ -16,7 +26,9 @@ in
         , resources = Some (
             defaultResources
             //
-            { requests = Some [{ mapKey = "storage", mapValue = "200Gi" }] }
+            { requests = Some [{ mapKey = "storage", mapValue = _params.size }] }
             )
         })
     } : PersistentVolumeClaim
+
+in mkLocalClaim
