@@ -4,7 +4,7 @@ All configuration is written in [dhall](https://github.com/dhall-lang/dhall-lang
 
 Run
 ```
-stack install dhall-json --resolver lts-13.4
+stack install dhall-json dhall-text --resolver lts-13.4
 ```
 to install everything
 

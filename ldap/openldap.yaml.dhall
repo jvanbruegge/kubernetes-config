@@ -43,6 +43,10 @@ let ldapContainer =
             { mountPath = "/container/service/slapd/assets/certs"
             , name = "ldap-certs"
             }
+        , defaultVolumeMount
+            { mountPath = "/root/ldif"
+            , name = "ldap-config"
+            }
         ]
     } : ../api/Container.dhall
 
@@ -56,6 +60,8 @@ let config =
     { volumes = Some
         [ ../api/mkVolume.dhall
             { name = volumeName, volumeType = <PVC = "ldap-claim" | ConfigMap : Text> }
+        , ../api/mkVolume.dhall
+            { name = "ldap-config", volumeType = <PVC : Text | ConfigMap = "ldap-config"> }
         ]
     }
 

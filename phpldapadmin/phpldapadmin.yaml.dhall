@@ -16,10 +16,7 @@ let adminContainer =
         }
     //
     { env = Some
-        [ { name = "PHPLDAPADMIN_LDAP_HOSTS"
-          , value = Some "#PYTHON2BASH:[{'ldaps://ldap.cerberus-systems.de/': [{'server': [{'tls': True, 'port': 0}]}]}]"
-          , valueFrom = None EnvVarSource }
-        , { name = "PHPLDAPADMIN_SERVER_PATH"
+        [ { name = "PHPLDAPADMIN_SERVER_PATH"
           , value = Some "/"
           , valueFrom = None EnvVarSource }
         , { name = "PHPLDAPADMIN_HTTPS"
@@ -38,6 +35,10 @@ let adminContainer =
             , name = "ldap-certs"
             }
           // { subPath = Some "https" }
+        , defaultVolumeMount
+            { mountPath = "/container/environment/01-custom"
+            , name = "config"
+            }
         ]
     } : ../api/Container.dhall
 
@@ -47,5 +48,11 @@ let config =
         , namespace = "phpldapadmin"
         , containers = [adminContainer]
         }
+    //
+    { volumes = Some
+        [ ../api/mkVolume.dhall
+            { name = "config", volumeType = <PVC : Text | ConfigMap = "config"> }
+        ]
+    }
 
 in ../api/mkDeployment.dhall (../helpers/withCerts.dhall "ldap-certs" config)

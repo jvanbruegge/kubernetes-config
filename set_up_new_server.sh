@@ -236,12 +236,9 @@ if [[ $res == 0 ]]; then
        generate_lease=true policies=get-cert ttl=2h
 fi
 
-plugin_sha=$(kubectl exec --namespace=vault -it vault-0 -- sh -c "sha256sum /etc/vault/plugins/vault-secrets-gen" \
-    | cut -d ' ' -f 1)
-
 set +e
-vault write sys/plugins/catalog/secrets-gen sha_256="$plugin_sha" command="vault-secrets-gen"
-vault secrets enable -path="gen" -plugin-name="secrets-gen" plugin
+echo "Enabling vault key-value backend"
+vault secrets enable -version=2 kv 2> /dev/null
 set -e
 
 user="jan.users"
@@ -256,4 +253,24 @@ for d in $(ls */volume*.yaml.dhall | xargs -n 1 dirname | uniq); do
 done
 
 ./applyDir.sh ldap
+
+passwd1=$(tr -dc _A-Za-z-0-9 < /dev/urandom | head -c${1:-32})
+passwd2=$(tr -dc _A-Za-z-0-9 < /dev/urandom | head -c${1:-32})
+
+echo "Saving ldap admin passwords in vault"
+vault kv put kv/ldap "config-admin=$passwd1" "admin=$passwd2"
+
+echo "Waiting for OpenLDAP to start, this will take a while"
+kubectl wait --namespace=ldap --for=condition=ready --timeout=3000s pods openldap-0
+{ kubectl logs --namespace=ldap -f openldap-0 & } | sed -n '/slapd starting/q'
+
+sleep 2
+
+kubectl exec --namespace=ldap -it openldap-0 \
+    -- bash -c "export pw1=\$(slappasswd -h {SSHA} -s $passwd1) && \
+    export pw2=\$(slappasswd -h {SSHA} -s $passwd2) && \
+    bash /root/ldif/command.sh && \
+    ldapmodify -Y EXTERNAL -H ldapi:// -f /root/chPassword.ldif && \
+    ldapmodify -H ldaps://ldap.cerberus-systems.de -D 'cn=admin,dc=cerberus-systems,dc=de' -x -w admin -f /root/chTreePassword.ldif"
+
 ./applyDir.sh phpldapadmin
