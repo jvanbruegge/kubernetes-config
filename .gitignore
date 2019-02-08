@@ -1,6 +1,3 @@
-*.yaml
-*.yml
-
 vault_keys.txt
 test_command.sh
 minikube-ip.dhall
