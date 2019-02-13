@@ -272,6 +272,7 @@ kubectl exec --namespace=ldap -it openldap-0 \
     bash /root/ldif/command.sh && \
     ldapmodify -Y EXTERNAL -H ldapi:// -f /root/chPassword.ldif && \
     ldapmodify -H ldaps://ldap.cerberus-systems.de -D 'cn=admin,dc=cerberus-systems,dc=de' -x -w admin -f /root/chTreePassword.ldif && \
-    ldapadd -Y EXTERNAL -H ldapi:// -f /root/ldif/objectclasses.ldif"
+    ldapadd -Y EXTERNAL -H ldapi:// -f /root/ldif/objectclasses.ldif && \
+    ldapadd -H ldaps://ldap.cerberus-systems.de -D 'cn=admin,dc=cerberus-systems,dc=de' -x -w $passwd2 -f /root/ldif/dit.ldif"
 
 ./applyDir.sh phpldapadmin
