@@ -8,9 +8,7 @@ objectClass: organizationalUnit
 ou: groups
 
 
-dn: uniqueIdentifier=0c0ec8fc-f23e-4d0e-9307-493566de75e9,ou=groups,dc=cerberus-systems,dc=de
+dn: displayName=nextcloud,ou=groups,dc=cerberus-systems,dc=de
 objectClass: cerberusGroup
-objectClass: cerberusObject
-displayName: Keepass Sync Users
-description: All users that have access to the WebDAV share for keepass databases
-uniqueIdentifier: 0c0ec8fc-f23e-4d0e-9307-493566de75e9
+description: All users with an account on my nextcloud
+displayName: nextcloud

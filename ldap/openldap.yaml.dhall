@@ -33,6 +33,12 @@ let ldapContainer =
             { mountPath = "/var/lib/ldap"
             , name = volumeName
             }
+          // { subPath = Some "data" }
+        , defaultVolumeMount
+            { mountPath = "/etc/ldap/slapd.d"
+            , name = volumeName
+            }
+          // { subPath = Some "config" }
         , defaultVolumeMount
             { mountPath = "/container/service/slapd/assets/certs"
             , name = "ldap-certs"
